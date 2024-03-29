@@ -1,8 +1,9 @@
 # Owlscript
 
-With Lexical scoping, dynamic typing, first class functions, recusrion, and built in lists,
-you'd be forgiven for assuming Smolz is yet another lisp, But with a syntax 
-similar to C and the overall 'feel' of python, Owlscript has something for everyone.
+With Lexical scoping, dynamic typing, first class functions, recursion, lambdas, and built in lists,
+you'd be forgiven for assuming OwlScript is yet another lisp. Influenced by the ease and flexability of 
+perl of and the spartan syntax of python, OwlScript is a language that's quick to learn and easy to use
+- without sacraficing power.
 
 Owlscript has a terse grammar, where variables are declared by use - no 'let' or 'var' keywords. 
 'if' and 'loop' statements allow for easy control flow of Owlscript programs.
