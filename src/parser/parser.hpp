@@ -21,7 +21,16 @@ class Parser {
         ASTNode* expression();
         ASTNode* statement();
         ASTNode* statementList();
+        ASTNode* ifStatement();
+        ASTNode* loopStatement();
+        ASTNode* listStatement();
+        ASTNode* printStatement();
+        ASTNode* defStatement();
+        ASTNode* idStatement();
+        ASTNode* returnStatement();
+        ASTNode* exprStatement();
         ASTNode* term();
+        ASTNode* factor();
         ASTNode* var();
         ASTNode* simpleExpr();
         ASTNode* listExpr();
