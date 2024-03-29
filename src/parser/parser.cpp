@@ -23,8 +23,9 @@ bool Parser::match(TOKENS token) {
     return false;
 }
 
-Parser::Parser() {
-
+Parser::Parser(bool trace) {
+    loud = trace;
+    recDepth = 0;
 }
 
 ASTNode* Parser::parse(vector<Lexeme>& tokens) {
@@ -39,6 +40,7 @@ ASTNode* Parser::program() {
 }
 
 ASTNode* Parser::statementList() {
+    enter("statement list");
     ASTNode* node = statement();
     ASTNode* m = node;
     while (lookahead() != RCURLY && lookahead() != EOFTOKEN) {
@@ -51,38 +53,60 @@ ASTNode* Parser::statementList() {
             m = t;
         }
     }
+    leave();
     return node;
 }
 
 ASTNode* Parser::paramList() {
+    return argsList();
+}
+
+ASTNode* Parser::argsList() {
+    enter("args list");
     ASTNode* node;
-    if (lookahead() == ID) {
-        node = makeExprNode(ID_EXPR, ID, current.stringVal);
-        match(ID);
-    }
+    if (lookahead() == RPAREN) {
+        leave("no arguments.");
+        return node;
+    } 
+    ASTNode d;
+    ASTNode* c = &d;
+    int argCount = 0;
+    do {
+        c->left = expression();
+        c = c->left;
+        argCount++;
+        if (lookahead() == COMA)
+            match(COMA);
+        else break;
+    } while(lookahead() != RPAREN);
+    node = d.left;
+    leave(to_string(argCount) + " arguments.");
     return node;
 }
 
 ASTNode* Parser::ifStatement() {
+    enter("if statement");
     ASTNode* node = makeStmtNode(IF_STMT, lookahead(), current.stringVal);
     match(IF);
     match(LPAREN);
     node->left = simpleExpr();
     match(RPAREN);
     match(LCURLY);
-    node->mid = program();
+    node->mid = statementList();
     if (lookahead() == RCURLY)
         match(RCURLY);
     if (lookahead() == ELSE) {
         match(ELSE);
-        node->right = program();
+        node->right = statementList();
         if (lookahead() == RCURLY)
             match(RCURLY);
     } else cout<<"Hey, who ate my closing brace?"<<endl;
+    leave();
     return node;
 }
 
 ASTNode* Parser::loopStatement() {
+    enter("loop");
     ASTNode* node = makeStmtNode(LOOP_STMT, lookahead(), current.stringVal);
     match (LOOP);
     match(LPAREN);
@@ -91,10 +115,12 @@ ASTNode* Parser::loopStatement() {
     match(LCURLY);
     node->right = program();
     match(RCURLY);
+    leave();
     return node;
 }
 
 ASTNode* Parser::listStatement() {
+    enter("list statement");
     ASTNode* node;
     if (lookahead() == PUSH) {
         node = makeStmtNode(PUSH_STMT, lookahead(), current.stringVal);
@@ -106,6 +132,7 @@ ASTNode* Parser::listStatement() {
         match(RPAREN);
         if (lookahead() == SEMI)
             match(SEMI);
+        leave("push");
         return node;
     }
     if (lookahead() == APPEND) {
@@ -118,6 +145,7 @@ ASTNode* Parser::listStatement() {
         match(RPAREN);
         if (lookahead() == SEMI)
             match(SEMI);
+        leave("append");
         return node;
     }
     if (lookahead() == POP) {
@@ -128,21 +156,26 @@ ASTNode* Parser::listStatement() {
         match(RPAREN);
         if (lookahead() == SEMI)
             match(SEMI);
+        leave("pop");
         return node;
     }
+    leave();
     return nullptr;
 }
 
 ASTNode* Parser::printStatement() {
+    enter("print");
     ASTNode* node = makeStmtNode(PRINT_STMT, lookahead(), current.stringVal);
     match(PRINT);
     node->left = expression();
     if (lookahead() == SEMI)
         match(SEMI);
+    leave();
     return node;
 }
 
 ASTNode* Parser::defStatement() {
+    enter("procedure definition");
     ASTNode* node = makeStmtNode(DEF_STMT, lookahead(), current.stringVal);
     match(DEF);
     node->data.stringVal = current.stringVal;
@@ -153,10 +186,12 @@ ASTNode* Parser::defStatement() {
     match(LCURLY);
     node->right = program();
     match(RCURLY);
+    leave();
     return node;
 }
 
 ASTNode* Parser::idStatement() {
+    enter("id statement");
     ASTNode* node = makeExprNode(ID_EXPR, lookahead(), current.stringVal);
     match(ID);
     if (lookahead() == ASSIGN) {
@@ -167,26 +202,33 @@ ASTNode* Parser::idStatement() {
         node->right = simpleExpr();
         if (lookahead() == SEMI)
             match(SEMI);
+        leave();
         return node;
     } else {
+        leave();
         return var();
     }
+    leave();
     return node;
 }
 
 ASTNode* Parser::returnStatement() {
+    enter("return statement");
     ASTNode*  node = makeStmtNode(RETURN_STMT, lookahead(), current.stringVal);
     match(RETURN);
     node->left = simpleExpr();
     if (lookahead() == SEMI)
         match(SEMI);
+    leave();
     return node;
 }
 
 ASTNode* Parser::exprStatement() {
+    enter("expr statement");
     ASTNode* node = simpleExpr();
     if (lookahead() == SEMI)
         match(SEMI);
+    leave();
     return node;
 }
 
@@ -216,12 +258,13 @@ ASTNode* Parser::statement() {
     if (lookahead() == RETURN) {
         return returnStatement();
     }
-    cout<<"Unknown Token: "<<current.stringVal<<endl;
+    cout<<"Unknown Token on Line: "<< current.lineNumber<<": "<<current.stringVal<<endl;
     nexttoken();
     return node;
 }
 
 ASTNode* Parser::simpleExpr() {
+    enter("simple expr");
     ASTNode* node = expression();
     if (lookahead() == EQUAL || lookahead() == LESS || lookahead() == NOTEQUAL || lookahead() == GREATER) {
         ASTNode* t = makeExprNode(OP_EXPR, lookahead(), current.stringVal);
@@ -230,10 +273,12 @@ ASTNode* Parser::simpleExpr() {
         node = t;
         node->right = expression();
     }
+    leave();
     return node;
 }
 
 ASTNode* Parser::expression() {
+    enter("expr");
     ASTNode* node = term();
     while (lookahead() == PLUS || lookahead() == MINUS) {
         ASTNode* expNode = makeExprNode(OP_EXPR, lookahead(), current.stringVal);
@@ -242,10 +287,12 @@ ASTNode* Parser::expression() {
         match(lookahead());
         node->right = term();
     }
+    leave();
     return node;
 }
 
 ASTNode* Parser::term() {
+    enter("term");
     ASTNode* node = factor();
     while (lookahead() == MULTIPLY || lookahead() == DIVIDE) {
         ASTNode* expNode = makeExprNode(OP_EXPR, lookahead(), current.stringVal);
@@ -254,14 +301,17 @@ ASTNode* Parser::term() {
         match(lookahead());
         node->right = factor();
     }
+    leave();
     return node;
 }
 
 ASTNode* Parser::factor() {
     ASTNode* node;
+    enter("factor");
     if (lookahead() == NUMBER) {
         node = makeExprNode(CONST_EXPR, lookahead(), current.stringVal);
         match(NUMBER);
+        leave("number");
         return node;
     }
     if (lookahead() == QUOTE) {
@@ -269,9 +319,11 @@ ASTNode* Parser::factor() {
         node = makeExprNode(STRINGLIT_EXPR, lookahead(), current.stringVal);
         match(STRING);
         match(QUOTE);
+        leave("string");
         return node;
     }
     if (lookahead() == ID) {
+        leave("id");
         return var();
     }
     if (lookahead() == LPAREN) {
@@ -280,14 +332,17 @@ ASTNode* Parser::factor() {
         match(RPAREN);
     }
     if (lookahead() == LAMBDA) {
+        leave("lambda");
         return lambdaExpr();
     }
     if (lookahead() == LSQ || lookahead() == LENGTH || lookahead() == SORT || lookahead() == POP)
         return listExpr();
+    leave();
     return node;
 }
 
 ASTNode* Parser::var() {
+    enter("var");
     ASTNode* node = nullptr;
     if (lookahead() == ID) {
         node = makeExprNode(ID_EXPR, lookahead(), current.stringVal);
@@ -296,15 +351,17 @@ ASTNode* Parser::var() {
             match(LSQ);
             node->left = simpleExpr();
             match(RSQ);
-        } else 
+            leave("list access");
+            return node;
+        }
         if (lookahead() == LPAREN) {
             match(LPAREN);
             node->type.expr = FUNC_EXPR;
-            if (lookahead() != RPAREN)
-                node->left = simpleExpr();
+            node->left = argsList();
             match(RPAREN);
+            leave("procedure call");
+            return node;
         }
-        return node;
     }
     return node;
 }
@@ -354,6 +411,7 @@ ASTNode* Parser::listExpr() {
 }
 
 ASTNode* Parser::lambdaExpr() {
+    enter("lambda");
     ASTNode* node = makeExprNode(LAMBDA_EXPR, lookahead(), current.stringVal);
     match(LAMBDA);
     match(LPAREN);
@@ -364,5 +422,28 @@ ASTNode* Parser::lambdaExpr() {
     node->right = statementList();
     if (lookahead() == RCURLY)
         match(RCURLY);
+    leave();
     return node;
+}
+
+void Parser::enter(string s) {
+    recDepth++;
+    say(s);
+}
+
+void Parser::say(string s) {
+    if (loud) {
+        for (int i = 0; i < recDepth; i++)
+            cout<<"  ";
+        cout<<"("<<recDepth<<") "<<s<<endl;
+    }
+}
+
+void Parser::leave(string s) {
+    say(s);
+    recDepth--;
+}
+
+void Parser::leave() {
+    --recDepth;
 }

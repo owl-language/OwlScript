@@ -42,9 +42,12 @@ ActivationRecord* Interpreter::prepareActivationRecord(ASTNode* node) {
     ActivationRecord* ar = new ActivationRecord();
     Procedure* func = procedures[node->data.stringVal];
     ar->function = func;
+    ASTNode* t = node->left;
     for (auto it = func->paramList; it != nullptr; it = it->left) {
-        ar->env.insert(make_pair(it->data.stringVal, memStore.storeAtNextFree(expression(node->left))));
+        ar->env.insert(make_pair(it->data.stringVal, memStore.storeAtNextFree(expression(t))));
         say(it->data.stringVal + " added to AR.");
+        if (t->left != nullptr)
+            t = t->left;
     }
     ar->returnValue = makeRealObject(0.0);
     ar->dynamicLink = callStack.top();

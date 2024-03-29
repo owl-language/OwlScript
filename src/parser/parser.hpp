@@ -8,15 +8,22 @@ using std::string;
 
 
 class Parser {
+        bool loud;
+        int recDepth;
         vector<Lexeme> lexemes;
         int lexPos;
         Lexeme current;
         TOKENS lookahead();
         void nexttoken();
         bool match(TOKENS token);
+        void enter(string s);
+        void leave(string s);
+        void leave();
+        void say(string s);
     public:
-        Parser();
+        Parser(bool trace = false);
         ASTNode* parse(vector<Lexeme>& tokens);
+    private:
         ASTNode* program();
         ASTNode* expression();
         ASTNode* statement();

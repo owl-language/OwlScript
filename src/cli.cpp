@@ -6,7 +6,7 @@ using namespace std;
 
 void interpretFile(string filename, bool loud) {
     Interpreter interpreter;
-    ASTBuilder astBuilder;
+    ASTBuilder astBuilder(loud);
     auto ast = astBuilder.fromFile(filename);
     if (loud) {
         ASTTracer tracer;
@@ -24,8 +24,10 @@ void repl() {
 int main(int argc, char* argv[]) {
      if (argc < 2) {
         cout<<"usage: "<<endl;
-        cout<<"owlscript <filename>"<<endl;
-        cout<<"owlscript -r (repl)"<<endl;
+        cout<<"owlscript -<options> <filename>"<<endl;
+        cout<<"   options: "<<endl;
+        cout<<"            -v verbose mode, displays parse and syntax tree."<<endl;
+        cout<<"            -r read eval print loop"<<endl;
         return 0;
     }
     if (argv[1][0] == '-' && argv[1][1] == 'r')

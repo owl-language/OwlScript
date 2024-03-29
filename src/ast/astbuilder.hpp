@@ -8,14 +8,14 @@ using std::string;
 
 class ASTBuilder {
     private:
-    
+        bool trace;
     public:
-        ASTBuilder() {
-            
+        ASTBuilder(bool loud = false) {
+            trace = loud;
         }
         ASTNode* build(string text) {
             Lexer lexer;
-            Parser parser;
+            Parser parser(trace);
             return parser.parse(lexer.lexString(text));
         }
         ASTNode* fromFile(string filename) {
