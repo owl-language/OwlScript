@@ -1,4 +1,5 @@
 #include <iostream>
+#include "ast/astbuilder.hpp"
 #include "interpreter/interpreter.hpp"
 #include "interpreter/repl.hpp"
 using namespace std;
@@ -23,8 +24,8 @@ void repl() {
 int main(int argc, char* argv[]) {
      if (argc < 2) {
         cout<<"usage: "<<endl;
-        cout<<"smolz <filename>"<<endl;
-        cout<<"smolz -r (repl)"<<endl;
+        cout<<"owlscript <filename>"<<endl;
+        cout<<"owlscript -r (repl)"<<endl;
         return 0;
     }
     if (argv[1][0] == '-' && argv[1][1] == 'r')

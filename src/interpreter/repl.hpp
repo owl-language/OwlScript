@@ -1,32 +1,11 @@
 #ifndef repl_hpp
 #define repl_hpp
 #include <iostream>
-#include "../lexer/lexer.hpp"
-#include "../parser/parser.hpp"
 #include "interpreter.hpp"
+#include "../ast/astbuilder.hpp"
 using std::string;
 using std::cout;
 using std::endl;
-
-
-class ASTBuilder {
-    private:
-    
-    public:
-        ASTBuilder() {
-            
-        }
-        ASTNode* build(string text) {
-            Lexer lexer;
-            Parser parser;
-            return parser.parse(lexer.lexString(text));
-        }
-        ASTNode* fromFile(string filename) {
-            Lexer lexer;
-            Parser parser;
-            return parser.parse(lexer.lex(filename));
-        }
-};
 
 
 class REPL {

@@ -52,13 +52,12 @@ ActivationRecord* Interpreter::prepareActivationRecord(ASTNode* node) {
 }
 
 Object* Interpreter::runClosure(ASTNode* node, Object* obj) {
-    cout<<"[CLOSURE]"<<endl;
+    say("[CLOSURE]");
     auto clos = obj->closure;
     ActivationRecord* ar = new ActivationRecord;
     ar->function = new Procedure;
     ar->function->functionBody = clos->functionBody;
     ar->env = clos->env;
-    cout<<"Params: "<<endl;
     for (auto it = clos->paramList; it != nullptr; it = it->left) {
         ar->env.insert(make_pair(it->data.stringVal, memStore.storeAtNextFree(expression(node->left))));
     }
@@ -67,12 +66,13 @@ Object* Interpreter::runClosure(ASTNode* node, Object* obj) {
     callStack.push(ar);
     auto body = callStack.top()->function->functionBody;
     stopProcedure = false;
-    cout<<"Running lambda"<<endl;
+    say("Executing lambda");
     run(body);
     Object* retVal = callStack.top()->returnValue;
-    for (auto toFree : callStack.top()->env) {
+    for (auto toFree : clos->env) {
         memStore.free(toFree.second);
     }
+    clos->env = callStack.top()->env;
     callStack.pop();
     return retVal;
 }
@@ -106,7 +106,7 @@ Object* Interpreter::procedureCall(ASTNode* node) {
 }
 
 Object* Interpreter::lambdaExpr(ASTNode* node) {
-    return makeClosureObject(makeClosure(node->right, node->left, callStack.top()->env));
+    return makeClosureObject(makeClosure(node->right, node->left, callStack.empty() ? st:callStack.top()->env));
 }
 
 Object* Interpreter::listExpr(ASTNode* node) {
@@ -120,6 +120,7 @@ Object* Interpreter::listExpr(ASTNode* node) {
         x = new ListNode;
         list->size = 0;
         list->head = nullptr;
+        leave();
         return makeListObject(list);
     }
     while (t != nullptr) {
@@ -133,18 +134,25 @@ Object* Interpreter::listExpr(ASTNode* node) {
         list->size++;
     }
     list->head = d.next;
+    leave();
     return makeListObject(list);
 }
 
+//resolve names to addresses using innermost nesting rule.
 int Interpreter::getAddress(string name) {
-    int addr = 0;
+    int addr = 0; //address zerp is never used, and is used as a control address.
+
+    //if we are in a procedure call, check the procedures symbol table first.
     if (!callStack.empty() && callStack.top()->env.find(name) != callStack.top()->env.end())
         addr = callStack.top()->env[name];
 
-    if (callStack.size() > 1 && callStack.top()->dynamicLink->env.find(name) != callStack.top()->dynamicLink->env.end())
+    //If address is still zero, we havent found the variable yet.
+    //Are we in a nested procedure? Check the outter procedures symbol table.
+    if (addr == 0 && callStack.size() > 1 && callStack.top()->dynamicLink->env.find(name) != callStack.top()->dynamicLink->env.end())
         addr = callStack.top()->dynamicLink->env[name];
 
-    if (st.find(name) != st.end())
+    //If the address is still zero, check the global symbol table
+    if (addr == 0 && st.find(name) != st.end())
         addr = st[name];
    
     if (addr == 0)
@@ -164,6 +172,7 @@ Object* Interpreter::listSize(ASTNode* node) {
         obj = memStore.get(addr);
         size = obj->list->size;
     }
+    leave();
     return makeIntObject(size);
 }
 
@@ -183,6 +192,7 @@ Object* Interpreter::sortList(ASTNode* node) {
         list->head = mergeSortList(list->head);
         list->size = obj->list->size;
     }
+    leave();
     return makeListObject(list);
 }
 
@@ -332,6 +342,7 @@ Object* Interpreter::expression(ASTNode* node) {
         default:
             break;
     }
+    leave();
     return makeRealObject(0.0f);
 }
 
@@ -378,6 +389,7 @@ void Interpreter::loopStmt(ASTNode* node) {
             t = t->next;
         }
     }
+    leave();
 }
 
 void Interpreter::assignStmt(ASTNode* node) {
@@ -394,12 +406,13 @@ void Interpreter::assignStmt(ASTNode* node) {
 }
 
 void Interpreter::defineFunction(ASTNode* node) {
+    enter("define function");
     Procedure* np = new Procedure;
     np->name = node->data.stringVal;
     np->paramList = node->left;
     np->functionBody = node->right;
     procedures[np->name] = np;
-    cout<<np->name<<" defined."<<endl;
+    leave(np->name + " defined.");
 }
 
 void Interpreter::returnStmt(ASTNode* node) {
