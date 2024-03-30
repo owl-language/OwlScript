@@ -45,3 +45,17 @@ Aside from indexed access, OwlScript also supports push/pop for use like a stack
     push("sponge bob");
     #whoops
     pop(villains);
+
+If your other car is a cdr, or you just prefer speaking with a bit of a lisp, OwlScript has some other familiar primitives as well:
+
+    list := [13, 42, 86, 37, 24, 11];
+    println list;
+    i := 0;
+    tail := list;
+    loop (i < length(list)) {
+        println i + ": " + first(tail);
+        tail := rest(tail);
+        i := i + 1;
+    }
+    print "\n";
+    println list;
